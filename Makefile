@@ -2,9 +2,9 @@
 .SILENT:
 .DEFAULT_GOAL := run
 
-cert:
-	openssl genrsa -out data/certs/id 4096
-	openssl rsa -in data/certs/id -pubout -out data/certs/id.pub
+certs:
+	openssl genrsa -out data/certs/id_rsa 4096
+	openssl rsa -in data/certs/id_rsa -pubout -out data/certs/id_rsa.pub
 run:
 	go run ./cmd/app/main.go
 swag:
