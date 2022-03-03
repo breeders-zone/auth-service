@@ -1,10 +1,11 @@
 package http
 
 import (
-	"fmt"
+
 	"time"
 
 	"github.com/breeders-zone/auth-service/internal/domain"
+	"github.com/breeders-zone/auth-service/internal/handlers/http/errors"
 	"github.com/breeders-zone/auth-service/internal/services"
 	"github.com/go-playground/validator/v10"
 
@@ -31,9 +32,8 @@ type LoginResponse struct {
 // @Produce  json
 // @Param input body LoginRequest true "sign in info"
 // @Success 200 {object} LoginResponse
-// @Failure 400,404 {object} LoginRequest
-// @Failure 422 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400,404,500 {object} errors.ErrorResponse
+// @Failure 422 {object} errors.ValidationErrorResponse
 // @Failure default {object} LoginRequest
 // @Router /login [post]
 func (h *Handler) Login(c *fiber.Ctx) error {
@@ -42,19 +42,25 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	var errors []*ErrorResponse
+	var valErrors []errors.ValidationError
 	if err := validator.New().Struct(input); err != nil {
 		for _, err := range err.(validator.ValidationErrors) {
-			var element ErrorResponse
+			var element errors.ValidationError
 			element.FailedField = err.StructNamespace()
 			element.Tag = err.Tag()
 			element.Value = err.Param()
-			errors = append(errors, &element)
+			valErrors = append(valErrors, element)
 		}
 	}
 
-	if errors != nil {
-		return c.Status(422).JSON(errors)
+	if valErrors != nil {
+		return c.Status(422).JSON(errors.ValidationErrorResponse{
+			ErrorResponse: errors.ErrorResponse{
+				Code: 422,
+				 Message: "Incalid request",
+			}, 
+			Errors: valErrors,
+		})
 	}
 
 	user, err := h.services.User.Login(services.UserLoginInput{
@@ -63,11 +69,14 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	})
 
 	if err != nil {
-		fmt.Print(err)
-		return c.JSON("User not found")
+		return c.Status(401).JSON(&errors.ErrorResponse{Code: 401, Message: "User not found"})
 	}
 
-	token, _ := jwt.Create(time.Second*17000000, user.Id)
+	token, err := jwt.Create(time.Second*17000000, user.Id)
+
+	if err != nil {
+		return c.Status(500).JSON(&errors.ErrorResponse{Code: 500, Message: "Failed to create token"})
+	}
 
 	return c.JSON(&LoginResponse{
 		token,
