@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*UserResponse, error)
+	FirstOrCreateByEmail(ctx context.Context, in *FirstOrCreateByEmailRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	UserById(ctx context.Context, in *UserByIdRequest, opts ...grpc.CallOption) (*UserResponse, error)
 }
 
@@ -39,6 +40,15 @@ func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ..
 	return out, nil
 }
 
+func (c *authServiceClient) FirstOrCreateByEmail(ctx context.Context, in *FirstOrCreateByEmailRequest, opts ...grpc.CallOption) (*UserResponse, error) {
+	out := new(UserResponse)
+	err := c.cc.Invoke(ctx, "/protobuf.identity.AuthService/FirstOrCreateByEmail", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) UserById(ctx context.Context, in *UserByIdRequest, opts ...grpc.CallOption) (*UserResponse, error) {
 	out := new(UserResponse)
 	err := c.cc.Invoke(ctx, "/protobuf.identity.AuthService/UserById", in, out, opts...)
@@ -53,6 +63,7 @@ func (c *authServiceClient) UserById(ctx context.Context, in *UserByIdRequest, o
 // for forward compatibility
 type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*UserResponse, error)
+	FirstOrCreateByEmail(context.Context, *FirstOrCreateByEmailRequest) (*UserResponse, error)
 	UserById(context.Context, *UserByIdRequest) (*UserResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
@@ -63,6 +74,9 @@ type UnimplementedAuthServiceServer struct {
 
 func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*UserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedAuthServiceServer) FirstOrCreateByEmail(context.Context, *FirstOrCreateByEmailRequest) (*UserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FirstOrCreateByEmail not implemented")
 }
 func (UnimplementedAuthServiceServer) UserById(context.Context, *UserByIdRequest) (*UserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UserById not implemented")
@@ -98,6 +112,24 @@ func _AuthService_Login_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_FirstOrCreateByEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FirstOrCreateByEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).FirstOrCreateByEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protobuf.identity.AuthService/FirstOrCreateByEmail",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).FirstOrCreateByEmail(ctx, req.(*FirstOrCreateByEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_UserById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UserByIdRequest)
 	if err := dec(in); err != nil {
@@ -126,6 +158,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Login",
 			Handler:    _AuthService_Login_Handler,
+		},
+		{
+			MethodName: "FirstOrCreateByEmail",
+			Handler:    _AuthService_FirstOrCreateByEmail_Handler,
 		},
 		{
 			MethodName: "UserById",
