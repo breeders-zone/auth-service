@@ -2,18 +2,44 @@ basePath: /
 definitions:
   domain.User:
     properties:
+      companyName:
+        type: string
       id:
         type: integer
+      name:
+        type: string
       phone:
         type: string
+      surname:
+        type: string
+      verified:
+        type: boolean
     type: object
-  http.ErrorResponse:
+  errors.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  errors.ValidationError:
     properties:
       failedField:
         type: string
       tag:
         type: string
       value:
+        type: string
+    type: object
+  errors.ValidationErrorResponse:
+    properties:
+      code:
+        type: integer
+      errors:
+        items:
+          $ref: '#/definitions/errors.ValidationError'
+        type: array
+      message:
         type: string
     type: object
   http.LoginRequest:
@@ -62,19 +88,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/http.LoginRequest'
+            $ref: '#/definitions/errors.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/http.LoginRequest'
+            $ref: '#/definitions/errors.ErrorResponse'
         "422":
           description: Unprocessable Entity
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/errors.ValidationErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/http.ErrorResponse'
+            $ref: '#/definitions/errors.ErrorResponse'
         default:
           description: ""
           schema:
@@ -82,6 +108,56 @@ paths:
       summary: User Login
       tags:
       - users-auth
+  /oauth/{provider}:
+    get:
+      consumes:
+      - application/json
+      description: Redirect to OAuth provider
+      parameters:
+      - description: Oauth provider
+        in: path
+        name: provider
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+      summary: OAuth provider redirect
+      tags:
+      - oauth
+  /oauth/{provider}/callback:
+    get:
+      consumes:
+      - application/json
+      description: Callback for OAuth provider
+      parameters:
+      - description: Oauth provider
+        in: path
+        name: provider
+        required: true
+        type: string
+      responses:
+        "301":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.ErrorResponse'
+      summary: OAuth provider callback
+      tags:
+      - oauth
 securityDefinitions:
   UsersAuth:
     in: header
