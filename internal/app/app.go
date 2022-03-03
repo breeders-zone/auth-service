@@ -8,6 +8,8 @@ import (
 	"github.com/breeders-zone/auth-service/internal/services"
 	"github.com/breeders-zone/auth-service/pkg/api"
 	"github.com/gofiber/fiber/v2"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/providers/vk"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -39,6 +41,10 @@ func Run() {
 	}
 
 	authService := api.NewAuthServiceClient(conn)
+
+	goth.UseProviders(
+		vk.New(conf.VkCleintId, conf.VkClientSercet, conf.OauthBase + "vk/callback"),
+	)
 
 	services := services.NewServices(authService)
 	handler := http.NewHandler(app, services)

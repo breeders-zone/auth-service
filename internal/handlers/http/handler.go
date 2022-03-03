@@ -3,6 +3,7 @@ package http
 import (
 	swagger "github.com/arsmn/fiber-swagger/v2"
 	_ "github.com/breeders-zone/auth-service/docs"
+	"github.com/breeders-zone/auth-service/internal/handlers/http/oauth"
 	"github.com/breeders-zone/auth-service/internal/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -24,4 +25,6 @@ func (h Handler) Init() {
 
 	h.app.Post("/login", h.Login)
 	h.app.Get("/.well-known/jwks.json", h.Jwk)
+
+	oauth.NewHandler(h.services).Init(h.app)
 }
