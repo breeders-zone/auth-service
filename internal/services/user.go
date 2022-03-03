@@ -12,8 +12,15 @@ type UserLoginInput struct {
 	Password string
 }
 
+type FirstOrCreateByEmailInput struct {
+	Email    string
+	Name     string
+	Surename string
+}
+
 type UserService interface {
 	Login(input UserLoginInput) (*domain.User, error)
+	FirstOrCreateByEmail(input FirstOrCreateByEmailInput) (*domain.User, error)
 }
 
 type User struct {
@@ -35,10 +42,35 @@ func (s *User) Login(input UserLoginInput) (*domain.User, error) {
 
 	// some logic
 	return &domain.User{
-		Id: res.Id,
-		Name: res.Name,
-		Surname: res.Surname,
+		Id:          res.Id,
+		Name:        res.Name,
+		Surname:     res.Surname,
 		CompanyName: res.CompanyName,
-		Phone:    res.Phone,
+		Phone:       res.Phone,
+		Verified:    res.Verified,
+	}, nil
+}
+
+func (s *User) FirstOrCreateByEmail(input FirstOrCreateByEmailInput) (*domain.User, error) {
+
+	res, err := s.authService.FirstOrCreateByEmail(
+		context.Background(),
+		&api.FirstOrCreateByEmailRequest{
+			Email:    input.Email,
+			Name:     input.Name,
+			Surename: input.Surename,
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	// some logic
+	return &domain.User{
+		Id:          res.Id,
+		Name:        res.Name,
+		Surname:     res.Surname,
+		CompanyName: res.CompanyName,
+		Phone:       res.Phone,
+		Verified:    res.Verified,
 	}, nil
 }
