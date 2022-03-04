@@ -64,11 +64,12 @@ func NewTokenManager(jwkKey string, pubKeyFile string, prvKeyFile string) (*Toke
 
 }
 
-func (t *TokenManager) Create(ttl time.Duration, content interface{}) (string, error) {
+func (t *TokenManager) Create(ttl time.Duration, id int32, roles interface{}) (string, error) {
 	now := time.Now().UTC()
 
 	claims := make(jwt.MapClaims)
-	claims["uid"] = content             // Our custom data.
+	claims["uid"] = id    
+	claims["roles"] = roles        
 	claims["exp"] = now.Add(ttl).Unix() // The expiration time after which the token must be disregarded.
 	claims["iat"] = now.Unix()          // The time at which the token was issued.
 	claims["nbf"] = now.Unix()          // The time before which the token must be disregarded.

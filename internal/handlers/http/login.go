@@ -82,7 +82,7 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 		return c.Status(401).JSON(&errors.ErrorResponse{Code: 401, Message: "User not found"})
 	}
 
-	token, err := h.tokenManager.Create(time.Second*17000000, user.Id)
+	token, err := h.tokenManager.Create(time.Second*17000000, user.Id, []string{"user"})
 
 	if err != nil {
 		return c.Status(500).JSON(&errors.ErrorResponse{Code: 500, Message: "Failed to create token"})
