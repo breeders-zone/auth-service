@@ -18,11 +18,6 @@ type FirstOrCreateByEmailInput struct {
 	Surename string
 }
 
-type UserService interface {
-	Login(input UserLoginInput) (*domain.User, error)
-	FirstOrCreateByEmail(input FirstOrCreateByEmailInput) (*domain.User, error)
-}
-
 type User struct {
 	authService api.AuthServiceClient
 }
@@ -33,15 +28,15 @@ func NewUserService(authService api.AuthServiceClient) *User {
 	}
 }
 
-func (s *User) Login(input UserLoginInput) (*domain.User, error) {
+func (s *User) Login(input UserLoginInput) (domain.User, error) {
 
 	res, err := s.authService.Login(context.Background(), &api.LoginRequest{Phone: input.Phone, Password: input.Password})
 	if err != nil {
-		return nil, err
+		return domain.User{}, err
 	}
 
 	// some logic
-	return &domain.User{
+	return domain.User{
 		Id:          res.Id,
 		Name:        res.Name,
 		Surname:     res.Surname,
@@ -51,7 +46,7 @@ func (s *User) Login(input UserLoginInput) (*domain.User, error) {
 	}, nil
 }
 
-func (s *User) FirstOrCreateByEmail(input FirstOrCreateByEmailInput) (*domain.User, error) {
+func (s *User) FirstOrCreateByEmail(input FirstOrCreateByEmailInput) (domain.User, error) {
 
 	res, err := s.authService.FirstOrCreateByEmail(
 		context.Background(),
@@ -61,11 +56,11 @@ func (s *User) FirstOrCreateByEmail(input FirstOrCreateByEmailInput) (*domain.Us
 			Surename: input.Surename,
 		})
 	if err != nil {
-		return nil, err
+		return domain.User{}, err
 	}
 
 	// some logic
-	return &domain.User{
+	return domain.User{
 		Id:          res.Id,
 		Name:        res.Name,
 		Surname:     res.Surname,
