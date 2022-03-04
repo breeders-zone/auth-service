@@ -1,15 +1,15 @@
 package http
 
 import (
-
 	"time"
 
 	"github.com/breeders-zone/auth-service/internal/domain"
 	"github.com/breeders-zone/auth-service/internal/handlers/http/errors"
 	"github.com/breeders-zone/auth-service/internal/services"
 	"github.com/go-playground/validator/v10"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
-	"github.com/breeders-zone/auth-service/pkg/jwt"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -20,7 +20,7 @@ type LoginRequest struct {
 
 type LoginResponse struct {
 	Token string       `json:"access_token"`
-	User  *domain.User `json:"data"`
+	User  domain.User `json:"data"`
 }
 
 // Login
@@ -32,7 +32,7 @@ type LoginResponse struct {
 // @Produce  json
 // @Param input body LoginRequest true "sign in info"
 // @Success 200 {object} LoginResponse
-// @Failure 400,404,500 {object} errors.ErrorResponse
+// @Failure 400,401,500,503 {object} errors.ErrorResponse
 // @Failure 422 {object} errors.ValidationErrorResponse
 // @Failure default {object} LoginRequest
 // @Router /login [post]
@@ -69,10 +69,20 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	})
 
 	if err != nil {
+		if e, ok := status.FromError(err); ok {
+            switch e.Code() {
+				case codes.Unavailable:
+					return c.Status(503).JSON(&errors.ErrorResponse{Code: 503, Message: "User Service not available"})
+				case codes.Internal:
+					return c.Status(500).JSON(&errors.ErrorResponse{Code: 500, Message: "User Service internal server error"})
+            }
+        }
+
+
 		return c.Status(401).JSON(&errors.ErrorResponse{Code: 401, Message: "User not found"})
 	}
 
-	token, err := jwt.Create(time.Second*17000000, user.Id)
+	token, err := h.tokenManager.Create(time.Second*17000000, user.Id)
 
 	if err != nil {
 		return c.Status(500).JSON(&errors.ErrorResponse{Code: 500, Message: "Failed to create token"})

@@ -1,7 +1,7 @@
 package http
 
 import (
-	"github.com/breeders-zone/auth-service/pkg/jwk"
+	"github.com/breeders-zone/auth-service/internal/handlers/http/errors"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -10,10 +10,9 @@ type JwkResponse struct {
 }
 
 func (h *Handler) Jwk(c *fiber.Ctx) error {
-	key, err := jwk.GetKey()
+	key, err :=  h.tokenManager.GetJwk()
 	if err != nil {
-		c.SendStatus(500)
-		return c.SendString("pizdec")
+		return c.Status(500).JSON(&errors.ErrorResponse{500, "Can't create jwk"})
 	}
 
 	return c.JSON(&JwkResponse{

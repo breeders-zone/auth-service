@@ -6,9 +6,10 @@ import (
 	"github.com/breeders-zone/auth-service/internal/config"
 	"github.com/breeders-zone/auth-service/internal/handlers/http/errors"
 	"github.com/breeders-zone/auth-service/internal/services"
-	"github.com/breeders-zone/auth-service/pkg/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/shareed2k/goth_fiber"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // OauthProviderRedirect
@@ -31,7 +32,7 @@ func (h *Handler) OauthProviderRedirect(c *fiber.Ctx) error {
 // @ModuleID OAuth
 // @Accept  json
 // @Success 301
-// @Failure 400,401,404,500 {object} errors.ErrorResponse
+// @Failure 400,401,500,503 {object} errors.ErrorResponse
 // @Param provider path string true "Oauth provider"
 // @Router /oauth/{provider}/callback [get]
 func (h *Handler) OauthProviderCallback(c *fiber.Ctx) error {
@@ -47,10 +48,20 @@ func (h *Handler) OauthProviderCallback(c *fiber.Ctx) error {
 	})
 
 	if err != nil {
+		if e, ok := status.FromError(err); ok {
+            switch e.Code() {
+				case codes.Unavailable:
+					return c.Status(503).JSON(&errors.ErrorResponse{Code: 503, Message: "User Service not available"})
+				case codes.Internal:
+					return c.Status(500).JSON(&errors.ErrorResponse{Code: 500, Message: "User Service internal server error"})
+            }
+        }
+
+
 		return c.Status(401).JSON(&errors.ErrorResponse{Code: 401, Message: "User not found"})
 	}
 
-	token, err := jwt.Create(time.Second*17000000, user.Id)
+	token, err := h.tokenManager.Create(time.Second*17000000, user.Id)
 
 	if err != nil {
 		return c.Status(500).JSON(&errors.ErrorResponse{Code: 500, Message: "Failed to create token"})
