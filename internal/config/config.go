@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 	"sync"
 
@@ -32,11 +31,9 @@ func GetConfig() (*Config, error) {
 		if config == nil {
 			conf := new(Config)
 
-			err := godotenv.Load()
+			godotenv.Load()
 
-			if err != nil {
-				log.Fatal("Error loading .env file")
-			}
+		
 
 			setFromEnv(conf)
 
