@@ -1,31 +1,70 @@
-package jwt
+package auth
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"time"
 
-	"github.com/breeders-zone/auth-service/internal/config"
 	"github.com/golang-jwt/jwt"
 )
 
-func Create(ttl time.Duration, content interface{}) (string, error) {
-	conf, err := config.GetConfig()
-	if err != nil {
-		log.Fatalf("Not load config")
+type TokenManager struct {
+	JwkId      string
+	PublicKey  *rsa.PublicKey
+	PrivateKey *rsa.PrivateKey
+}
+
+func NewTokenManager(jwkKey string, pubKeyFile string, prvKeyFile string) (*TokenManager, error) {
+
+	if prvKeyFile == "" && prvKeyFile == "" {
+		key, err := rsa.GenerateKey(rand.Reader, 4096)
+
+		if err != nil {
+			return nil, err
+		}
+
+		pubKey := &key.PublicKey
+		prvKey := key
+
+		return &TokenManager{
+			jwkKey,
+			pubKey,
+			prvKey,
+		}, nil
 	}
 
-	prvKey, err := ioutil.ReadFile(conf.JwtPrivateKey)
+	prvKeyBytes, err := ioutil.ReadFile(prvKeyFile)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	key, err := jwt.ParseRSAPrivateKeyFromPEM(prvKey)
+	prvKey, err := jwt.ParseRSAPrivateKeyFromPEM(prvKeyBytes)
 	if err != nil {
-		return "", fmt.Errorf("create: parse key: %w", err)
+		return nil, fmt.Errorf("create: parse key: %w", err)
 	}
 
+	pubKeyBytes, err := ioutil.ReadFile(pubKeyFile)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubKeyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("validate: parse key: %w", err)
+	}
+
+	return &TokenManager{
+		jwkKey,
+		pubKey,
+		prvKey,
+	}, nil
+
+}
+
+func (t *TokenManager) Create(ttl time.Duration, content interface{}) (string, error) {
 	now := time.Now().UTC()
 
 	claims := make(jwt.MapClaims)
@@ -37,7 +76,7 @@ func Create(ttl time.Duration, content interface{}) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = "foo"
 
-	tokenStr, err := token.SignedString(key)
+	tokenStr, err := token.SignedString(t.PrivateKey)
 	if err != nil {
 		return "", fmt.Errorf("create: sign token: %w", err)
 	}
@@ -45,37 +84,22 @@ func Create(ttl time.Duration, content interface{}) (string, error) {
 	return tokenStr, nil
 }
 
-func Validate(token string) (interface{}, error) {
-	conf, err := config.GetConfig()
-	if err != nil {
-		log.Fatalf("Not load config")
-	}
-
-	pubKey, err := ioutil.ReadFile(conf.JwtPublicKey)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	key, err := jwt.ParseRSAPublicKeyFromPEM(pubKey)
-	if err != nil {
-		return "", fmt.Errorf("validate: parse key: %w", err)
-	}
- 
+func (t *TokenManager) Validate(token string) (interface{}, error) {
 	tok, err := jwt.Parse(token, func(jwtToken *jwt.Token) (interface{}, error) {
 		if _, ok := jwtToken.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected method: %s", jwtToken.Header["alg"])
 		}
- 
-		return key, nil
+
+		return t.PrivateKey, nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("validate: %w", err)
 	}
- 
+
 	claims, ok := tok.Claims.(jwt.MapClaims)
 	if !ok || !tok.Valid {
 		return nil, fmt.Errorf("validate: invalid")
 	}
- 
+
 	return claims["uid"], nil
 }

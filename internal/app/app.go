@@ -7,6 +7,7 @@ import (
 	"github.com/breeders-zone/auth-service/internal/handlers/http"
 	"github.com/breeders-zone/auth-service/internal/services"
 	"github.com/breeders-zone/auth-service/pkg/api"
+	"github.com/breeders-zone/auth-service/pkg/auth"
 	"github.com/gofiber/fiber/v2"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/vk"
@@ -46,9 +47,14 @@ func Run() {
 		vk.New(conf.VkCleintId, conf.VkClientSercet, conf.OauthBase + "vk/callback"),
 	)
 
+	tokenManager, err := auth.NewTokenManager(conf.JwtKeyId, conf.JwtPublicKey, conf.JwtPrivateKey)
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+
 	services := services.NewServices(authService)
-	handler := http.NewHandler(app, services)
-	handler.Init()
+	handler := http.NewHandler(services, tokenManager)
+	handler.Init(app)
 
 	app.Listen(":3000")
 }

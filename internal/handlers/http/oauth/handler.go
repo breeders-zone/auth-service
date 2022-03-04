@@ -2,16 +2,19 @@ package oauth
 
 import (
 	"github.com/breeders-zone/auth-service/internal/services"
+	"github.com/breeders-zone/auth-service/pkg/auth"
 	"github.com/gofiber/fiber/v2"
 )
 
 type Handler struct {
 	services *services.Services
+	tokenManager *auth.TokenManager
 }
 
-func NewHandler(services *services.Services) *Handler {
+func NewHandler(services *services.Services, tokenManager *auth.TokenManager) *Handler {
 	return &Handler{
 		services,
+		tokenManager,
 	}
 }
 

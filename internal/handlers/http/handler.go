@@ -5,26 +5,30 @@ import (
 	_ "github.com/breeders-zone/auth-service/docs"
 	"github.com/breeders-zone/auth-service/internal/handlers/http/oauth"
 	"github.com/breeders-zone/auth-service/internal/services"
+	"github.com/breeders-zone/auth-service/pkg/auth"
 	"github.com/gofiber/fiber/v2"
 )
 
 type Handler struct {
-	app      *fiber.App
 	services *services.Services
+	tokenManager *auth.TokenManager
 }
 
-func NewHandler(app *fiber.App, services *services.Services) *Handler {
+func NewHandler(services *services.Services, tokenManager *auth.TokenManager) *Handler {
 	return &Handler{
-		app,
 		services,
+		tokenManager,
 	}
 }
 
-func (h Handler) Init() {
-	h.app.Get("/swagger/*", swagger.HandlerDefault) // default
+func (h Handler) Init(app *fiber.App) {
+	app.Get("/swagger/*", swagger.HandlerDefault) // default
 
-	h.app.Post("/login", h.Login)
-	h.app.Get("/.well-known/jwks.json", h.Jwk)
+	app.Get("/ping", func(c *fiber.Ctx) error {
+		return c.Status(200).SendString("pong")
+	})
+	app.Post("/login", h.Login)
+	app.Get("/.well-known/jwks.json", h.Jwk)
 
-	oauth.NewHandler(h.services).Init(h.app)
+	oauth.NewHandler(h.services, h.tokenManager).Init(app)
 }
